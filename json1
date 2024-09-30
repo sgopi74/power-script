@@ -1,4 +1,4 @@
-# Function to compare JSON objects recursively
+# Function to recursively compare JSON objects, including arrays and nested objects
 function Compare-NestedJson {
     param (
         [Parameter(Mandatory=$true)]
@@ -10,44 +10,71 @@ function Compare-NestedJson {
         [string]$Path = ""
     )
 
-    # Get the combined list of keys from both JSON objects
+    # Get all keys (properties) from both JSON objects
     $allKeys = ($Json1.PSObject.Properties.Name + $Json2.PSObject.Properties.Name) | Sort-Object -Unique
 
     foreach ($key in $allKeys) {
-        # Construct the current path for nested properties
         $currentPath = if ($Path) { "$Path.$key" } else { $key }
 
-        # If the key exists only in one of the objects
-        if ($Json1.$key -eq $null) {
+        if (-not $Json1.PSObject.Properties[$key]) {
             Write-Host "Key '$currentPath' exists only in the second JSON."
-        } elseif ($Json2.$key -eq $null) {
+        } elseif (-not $Json2.PSObject.Properties[$key]) {
             Write-Host "Key '$currentPath' exists only in the first JSON."
         } else {
-            # If the value is another nested object, call the function recursively
-            if ($Json1.$key -is [PSCustomObject] -and $Json2.$key -is [PSCustomObject]) {
-                Compare-NestedJson -Json1 $Json1.$key -Json2 $Json2.$key -Path $currentPath
+            $value1 = $Json1.$key
+            $value2 = $Json2.$key
+
+            # If both values are nested JSON objects, recurse
+            if ($value1 -is [PSCustomObject] -and $value2 -is [PSCustomObject]) {
+                Compare-NestedJson -Json1 $value1 -Json2 $value2 -Path $currentPath
             }
-            # Compare arrays separately
-            elseif ($Json1.$key -is [Array] -and $Json2.$key -is [Array]) {
-                if (-not ($Json1.$key | Compare-Object -ReferenceObject $Json2.$key)) {
-                    Write-Host "Difference in array at path: $currentPath"
+            # If both values are arrays, compare them
+            elseif ($value1 -is [Array] -and $value2 -is [Array]) {
+                if ($value1.Count -ne $value2.Count) {
+                    Write-Host "Array size mismatch at '$currentPath': First JSON has $($value1.Count) items, second JSON has $($value2.Count) items."
+                } else {
+                    Compare-Arrays -Array1 $value1 -Array2 $value2 -Path $currentPath
                 }
             }
-            # Compare scalar values
-            else {
-                if ($Json1.$key -ne $Json2.$key) {
-                    Write-Host "Difference found at '$currentPath':"
-                    Write-Host "First JSON:  $($Json1.$key)"
-                    Write-Host "Second JSON: $($Json2.$key)"
-                }
+            # For simple scalar values, compare directly
+            elseif ($value1 -ne $value2) {
+                Write-Host "Difference at '$currentPath':"
+                Write-Host "First JSON:  $($value1)"
+                Write-Host "Second JSON: $($value2)"
             }
         }
     }
 }
 
-# Load JSON files
+# Function to compare arrays element-by-element
+function Compare-Arrays {
+    param (
+        [Array]$Array1,
+        [Array]$Array2,
+        [string]$Path
+    )
+
+    for ($i = 0; $i -lt $Array1.Count; $i++) {
+        $element1 = $Array1[$i]
+        $element2 = $Array2[$i]
+        $currentPath = "$Path[$i]"
+
+        # Recursively compare if array elements are objects
+        if ($element1 -is [PSCustomObject] -and $element2 -is [PSCustomObject]) {
+            Compare-NestedJson -Json1 $element1 -Json2 $element2 -Path $currentPath
+        } elseif ($element1 -ne $element2) {
+            Write-Host "Difference at '$currentPath':"
+            Write-Host "First JSON:  $($element1)"
+            Write-Host "Second JSON: $($element2)"
+        }
+    }
+}
+
+# Load the JSON files
 $json1 = Get-Content "C:\path\to\first_file.json" -Raw | ConvertFrom-Json
 $json2 = Get-Content "C:\path\to\second_file.json" -Raw | ConvertFrom-Json
 
-# Call the function to compare nested JSONs
+# Compare the two JSON files
 Compare-NestedJson -Json1 $json1 -Json2 $json2
+
+     
