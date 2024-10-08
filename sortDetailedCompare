@@ -20,8 +20,8 @@ function Compare-JsonObjects {
     $allKeys = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) | Sort-Object -Unique
 
     foreach ($key in $allKeys) {
-        $value1 = if ($object1.PSObject.Properties[$key]) { $object1.$key } else { $null }
-        $value2 = if ($object2.PSObject.Properties[$key]) { $object2.$key } else { $null }
+        $value1 = if ($object1.PSObject.Properties[$key]) { $object1.PSObject.Properties[$key].Value } else { $null }
+        $value2 = if ($object2.PSObject.Properties[$key]) { $object2.PSObject.Properties[$key].Value } else { $null }
 
         if ($value1 -ne $value2) {
             $differences += [PSCustomObject]@{
@@ -53,7 +53,7 @@ for ($i = 0; $i -lt $sortedJsonArray1.Count; $i++) {
     $diff = Compare-JsonObjects -object1 $sortedJsonArray1[$i] -object2 $sortedJsonArray2[$i]
 
     if ($diff.Count -gt 0) {
-        Write-Host "Differences found in object $i:"
+        Write-Host "Differences found in object $($i):"
         $diff | Format-Table -AutoSize
     }
 }
