@@ -20,8 +20,8 @@ function Compare-JsonObjects {
     $allKeys = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) | Sort-Object -Unique
 
     foreach ($key in $allKeys) {
-        $value1 = $object1.PSObject.Properties[$key]?.Value
-        $value2 = $object2.PSObject.Properties[$key]?.Value
+        $value1 = if ($object1.PSObject.Properties[$key]) { $object1.$key } else { $null }
+        $value2 = if ($object2.PSObject.Properties[$key]) { $object2.$key } else { $null }
 
         if ($value1 -ne $value2) {
             $differences += [PSCustomObject]@{
