@@ -6,25 +6,25 @@ $jsonFile2 = "C:\path\to\your\secondFile.json"
 $jsonArray1 = Get-Content -Path $jsonFile1 | ConvertFrom-Json
 $jsonArray2 = Get-Content -Path $jsonFile2 | ConvertFrom-Json
 
-# Function to find differences in keys and values between two JSON objects
+# Function to find differences in keys and values between two JSON objects using hashtables
 function Compare-JsonObjects {
     param (
         [Parameter(Mandatory = $true)]
-        [PSCustomObject]$object1,
-        [PSCustomObject]$object2
+        [hashtable]$object1,
+        [hashtable]$object2
     )
 
     $differences = @()
     
     # Get all unique keys from both objects
-    $allKeys = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) | Sort-Object -Unique
+    $allKeys = ($object1.Keys + $object2.Keys) | Sort-Object -Unique
 
     foreach ($key in $allKeys) {
-        $value1 = if ($object1.PSObject.Properties[$key]) { $object1.PSObject.Properties[$key].Value } else { $null }
-        $value2 = if ($object2.PSObject.Properties[$key]) { $object2.PSObject.Properties[$key].Value } else { $null }
+        $value1 = if ($object1.ContainsKey($key)) { $object1[$key] } else { $null }
+        $value2 = if ($object2.ContainsKey($key)) { $object2[$key] } else { $null }
 
         if ($value1 -ne $value2) {
-            $differences += [PSCustomObject]@{
+            $differences += @{
                 Key      = $key
                 Value1   = $value1
                 Value2   = $value2
@@ -34,23 +34,41 @@ function Compare-JsonObjects {
     return $differences
 }
 
-# Sort both JSON arrays to handle unordered objects
-$sortedJsonArray1 = $jsonArray1 | Sort-Object { $_ | ConvertTo-Json -Compress }
-$sortedJsonArray2 = $jsonArray2 | Sort-Object { $_ | ConvertTo-Json -Compress }
+# Convert JSON objects to hashtables for compatibility
+$hashtableArray1 = $jsonArray1 | ForEach-Object { $_ | ConvertTo-Hashtable }
+$hashtableArray2 = $jsonArray2 | ForEach-Object { $_ | ConvertTo-Hashtable }
+
+# Helper function to convert PSCustomObject to hashtable
+function ConvertTo-Hashtable {
+    param (
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$obj
+    )
+
+    $hashtable = @{}
+    foreach ($property in $obj.PSObject.Properties) {
+        $hashtable[$property.Name] = $property.Value
+    }
+    return $hashtable
+}
+
+# Sort both hashtable arrays to handle unordered objects
+$sortedHashtableArray1 = $hashtableArray1 | Sort-Object { $_.Keys | Out-String }
+$sortedHashtableArray2 = $hashtableArray2 | Sort-Object { $_.Keys | Out-String }
 
 # List to store all differences found
 $totalDifferences = @()
 
-# Iterate through each object in the sorted JSON arrays
-for ($i = 0; $i -lt $sortedJsonArray1.Count; $i++) {
-    if ($i -ge $sortedJsonArray2.Count) {
+# Iterate through each object in the sorted hashtable arrays
+for ($i = 0; $i -lt $sortedHashtableArray1.Count; $i++) {
+    if ($i -ge $sortedHashtableArray2.Count) {
         Write-Host "Extra objects found in first file that are not present in the second file:"
-        Write-Host ($sortedJsonArray1[$i] | ConvertTo-Json -Compress)
+        Write-Host ($sortedHashtableArray1[$i] | ConvertTo-Json -Compress)
         continue
     }
 
     # Compare each object in detail
-    $diff = Compare-JsonObjects -object1 $sortedJsonArray1[$i] -object2 $sortedJsonArray2[$i]
+    $diff = Compare-JsonObjects -object1 $sortedHashtableArray1[$i] -object2 $sortedHashtableArray2[$i]
 
     if ($diff.Count -gt 0) {
         Write-Host "Differences found in object $($i):"
@@ -59,9 +77,9 @@ for ($i = 0; $i -lt $sortedJsonArray1.Count; $i++) {
 }
 
 # Check if the second JSON file has extra objects
-if ($sortedJsonArray2.Count -gt $sortedJsonArray1.Count) {
+if ($sortedHashtableArray2.Count -gt $sortedHashtableArray1.Count) {
     Write-Host "Extra objects found in second file that are not present in the first file:"
-    for ($j = $sortedJsonArray1.Count; $j -lt $sortedJsonArray2.Count; $j++) {
-        Write-Host ($sortedJsonArray2[$j] | ConvertTo-Json -Compress)
+    for ($j = $sortedHashtableArray1.Count; $j -lt $sortedHashtableArray2.Count; $j++) {
+        Write-Host ($sortedHashtableArray2[$j] | ConvertTo-Json -Compress)
     }
 }
