@@ -6,37 +6,38 @@ $jsonFile2 = "C:\path\to\your\secondFile.json"
 $jsonArray1 = Get-Content -Path $jsonFile1 | ConvertFrom-Json
 $jsonArray2 = Get-Content -Path $jsonFile2 | ConvertFrom-Json
 
-# Function to sort JSON objects for comparison by converting them to a consistent string format
-function Sort-JsonArray {
+# Function to sort and convert JSON objects into a consistent string format for comparison
+function Normalize-JsonArray {
     param (
         [Parameter(Mandatory = $true)]
         [array]$jsonArray
     )
-    # Sort each object based on its JSON string representation to ensure a uniform comparison
-    return $jsonArray | Sort-Object { $_ | ConvertTo-Json -Compress }
+    # Convert each object to a sorted JSON string representation
+    return $jsonArray | ForEach-Object { ($_ | ConvertTo-Json -Compress) } | Sort-Object
 }
 
-# Sort both JSON arrays to handle unordered objects
-$sortedJsonArray1 = Sort-JsonArray -jsonArray $jsonArray1
-$sortedJsonArray2 = Sort-JsonArray -jsonArray $jsonArray2
+# Normalize and sort both JSON arrays
+$normalizedJsonArray1 = Normalize-JsonArray -jsonArray $jsonArray1
+$normalizedJsonArray2 = Normalize-JsonArray -jsonArray $jsonArray2
 
-# Compare the sorted arrays to find extra objects in the first file not present in the second file
-$extraInFile1 = Compare-Object -ReferenceObject $sortedJsonArray2 -DifferenceObject $sortedJsonArray1 -PassThru
+# Identify extra objects in the first file that are not present in the second file
+$extraInFile1 = Compare-Object -ReferenceObject $normalizedJsonArray2 -DifferenceObject $normalizedJsonArray1 -PassThru
 
-# Compare the sorted arrays to find extra objects in the second file not present in the first file
-$extraInFile2 = Compare-Object -ReferenceObject $sortedJsonArray1 -DifferenceObject $sortedJsonArray2 -PassThru
+# Identify extra objects in the second file that are not present in the first file
+$extraInFile2 = Compare-Object -ReferenceObject $normalizedJsonArray1 -DifferenceObject $normalizedJsonArray2 -PassThru
 
-# Display the results
+# Display the results for extra objects in the first file
 if ($extraInFile1.Count -gt 0) {
     Write-Host "Extra objects found in the first file that are not present in the second file:"
-    $extraInFile1 | ForEach-Object { $_ | ConvertTo-Json -Compress | Write-Host }
+    $extraInFile1 | ForEach-Object { $_ | Write-Host }
 } else {
     Write-Host "No extra objects found in the first file."
 }
 
+# Display the results for extra objects in the second file
 if ($extraInFile2.Count -gt 0) {
     Write-Host "Extra objects found in the second file that are not present in the first file:"
-    $extraInFile2 | ForEach-Object { $_ | ConvertTo-Json -Compress | Write-Host }
+    $extraInFile2 | ForEach-Object { $_ | Write-Host }
 } else {
     Write-Host "No extra objects found in the second file."
 }
