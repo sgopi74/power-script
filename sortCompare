@@ -1,0 +1,42 @@
+# Paths to the JSON files
+$jsonFile1 = "C:\path\to\your\firstFile.json"
+$jsonFile2 = "C:\path\to\your\secondFile.json"
+
+# Load and convert the JSON files to objects
+$jsonArray1 = Get-Content -Path $jsonFile1 | ConvertFrom-Json
+$jsonArray2 = Get-Content -Path $jsonFile2 | ConvertFrom-Json
+
+# Function to sort JSON objects for comparison by converting them to a consistent string format
+function Sort-JsonArray {
+    param (
+        [Parameter(Mandatory = $true)]
+        [array]$jsonArray
+    )
+    # Sort each object based on its JSON string representation to ensure a uniform comparison
+    return $jsonArray | Sort-Object { $_ | ConvertTo-Json -Compress }
+}
+
+# Sort both JSON arrays to handle unordered objects
+$sortedJsonArray1 = Sort-JsonArray -jsonArray $jsonArray1
+$sortedJsonArray2 = Sort-JsonArray -jsonArray $jsonArray2
+
+# Compare the sorted arrays to find extra objects in the first file not present in the second file
+$extraInFile1 = Compare-Object -ReferenceObject $sortedJsonArray2 -DifferenceObject $sortedJsonArray1 -PassThru
+
+# Compare the sorted arrays to find extra objects in the second file not present in the first file
+$extraInFile2 = Compare-Object -ReferenceObject $sortedJsonArray1 -DifferenceObject $sortedJsonArray2 -PassThru
+
+# Display the results
+if ($extraInFile1.Count -gt 0) {
+    Write-Host "Extra objects found in the first file that are not present in the second file:"
+    $extraInFile1 | ForEach-Object { $_ | ConvertTo-Json -Compress | Write-Host }
+} else {
+    Write-Host "No extra objects found in the first file."
+}
+
+if ($extraInFile2.Count -gt 0) {
+    Write-Host "Extra objects found in the second file that are not present in the first file:"
+    $extraInFile2 | ForEach-Object { $_ | ConvertTo-Json -Compress | Write-Host }
+} else {
+    Write-Host "No extra objects found in the second file."
+}
