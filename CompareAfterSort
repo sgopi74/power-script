@@ -1,0 +1,33 @@
+# Paths to the JSON files
+$jsonFile1 = "C:\path\to\your\firstFile.json"
+$jsonFile2 = "C:\path\to\your\secondFile.json"
+
+# Load and convert the JSON files to objects
+$jsonArray1 = Get-Content -Path $jsonFile1 | ConvertFrom-Json
+$jsonArray2 = Get-Content -Path $jsonFile2 | ConvertFrom-Json
+
+# Function to sort JSON arrays by multiple keys (entire object)
+function Sort-JsonArray {
+    param (
+        [Parameter(Mandatory = $true)]
+        [array]$jsonArray
+    )
+
+    # Convert each object to a string representation and sort by that to ensure full object comparison
+    return $jsonArray | Sort-Object { $_ | ConvertTo-Json -Compress }
+}
+
+# Sort the JSON arrays based on the entire object
+$sortedJsonArray1 = Sort-JsonArray -jsonArray $jsonArray1
+$sortedJsonArray2 = Sort-JsonArray -jsonArray $jsonArray2
+
+# Compare the sorted JSON arrays
+$differences = Compare-Object -ReferenceObject $sortedJsonArray1 -DifferenceObject $sortedJsonArray2
+
+# Display the differences
+if ($differences) {
+    Write-Host "Differences found between the JSON files:"
+    $differences | Format-Table
+} else {
+    Write-Host "The JSON files are identical."
+}
