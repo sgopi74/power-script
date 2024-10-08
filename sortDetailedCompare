@@ -1,0 +1,67 @@
+# Paths to the JSON files
+$jsonFile1 = "C:\path\to\your\firstFile.json"
+$jsonFile2 = "C:\path\to\your\secondFile.json"
+
+# Load and convert the JSON files to objects
+$jsonArray1 = Get-Content -Path $jsonFile1 | ConvertFrom-Json
+$jsonArray2 = Get-Content -Path $jsonFile2 | ConvertFrom-Json
+
+# Function to find differences in keys and values between two JSON objects
+function Compare-JsonObjects {
+    param (
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$object1,
+        [PSCustomObject]$object2
+    )
+
+    $differences = @()
+    
+    # Get all unique keys from both objects
+    $allKeys = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) | Sort-Object -Unique
+
+    foreach ($key in $allKeys) {
+        $value1 = $object1.PSObject.Properties[$key]?.Value
+        $value2 = $object2.PSObject.Properties[$key]?.Value
+
+        if ($value1 -ne $value2) {
+            $differences += [PSCustomObject]@{
+                Key      = $key
+                Value1   = $value1
+                Value2   = $value2
+            }
+        }
+    }
+    return $differences
+}
+
+# Sort both JSON arrays to handle unordered objects
+$sortedJsonArray1 = $jsonArray1 | Sort-Object { $_ | ConvertTo-Json -Compress }
+$sortedJsonArray2 = $jsonArray2 | Sort-Object { $_ | ConvertTo-Json -Compress }
+
+# List to store all differences found
+$totalDifferences = @()
+
+# Iterate through each object in the sorted JSON arrays
+for ($i = 0; $i -lt $sortedJsonArray1.Count; $i++) {
+    if ($i -ge $sortedJsonArray2.Count) {
+        Write-Host "Extra objects found in first file that are not present in the second file:"
+        Write-Host ($sortedJsonArray1[$i] | ConvertTo-Json -Compress)
+        continue
+    }
+
+    # Compare each object in detail
+    $diff = Compare-JsonObjects -object1 $sortedJsonArray1[$i] -object2 $sortedJsonArray2[$i]
+
+    if ($diff.Count -gt 0) {
+        Write-Host "Differences found in object $i:"
+        $diff | Format-Table -AutoSize
+    }
+}
+
+# Check if the second JSON file has extra objects
+if ($sortedJsonArray2.Count -gt $sortedJsonArray1.Count) {
+    Write-Host "Extra objects found in second file that are not present in the first file:"
+    for ($j = $sortedJsonArray1.Count; $j -lt $sortedJsonArray2.Count; $j++) {
+        Write-Host ($sortedJsonArray2[$j] | ConvertTo-Json -Compress)
+    }
+}
