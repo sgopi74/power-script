@@ -6,17 +6,6 @@ $sample2Path = "C:\path\to\sample2.json"
 $sample1 = Get-Content -Raw -Path $sample1Path | ConvertFrom-Json
 $sample2 = Get-Content -Raw -Path $sample2Path | ConvertFrom-Json
 
-# Extract the structure and data
-$structure1 = $sample1[0]
-$data1 = $sample1[1]
-
-$structure2 = $sample2[0]
-$data2 = $sample2[1]
-
-# Sort the data based on 'State' and 'LGA'
-$data1 = $data1 | Sort-Object -Property State, LGA
-$data2 = $data2 | Sort-Object -Property State, LGA
-
 # Function to compare two JSON objects
 function Compare-JsonObjects {
     param (
@@ -46,7 +35,7 @@ function Compare-JsonObjects {
     return $differences
 }
 
-# Function to compare two datasets (array of objects)
+# Function to compare two datasets (array of objects) without hardcoding property names
 function Compare-JsonData {
     param (
         [Parameter(Mandatory=$true)]
@@ -58,20 +47,23 @@ function Compare-JsonData {
 
     $differences = @()
 
+    # Sort both datasets by all available properties
+    $sortedData1 = $data1 | Sort-Object -Property *
+    $sortedData2 = $data2 | Sort-Object -Property *
+
     # Compare object count
-    if ($data1.Count -ne $data2.Count) {
-        $differences += "The number of objects differs: sample1=$($data1.Count) sample2=$($data2.Count)"
+    if ($sortedData1.Count -ne $sortedData2.Count) {
+        $differences += "The number of objects differs: sample1=$($sortedData1.Count) sample2=$($sortedData2.Count)"
     }
 
-    # Compare each object by matching "State" and "LGA"
-    for ($i = 0; $i -lt $data1.Count; $i++) {
-        $object1 = $data1[$i]
-        $object2 = $data2[$i]
-        
-        # Compare the objects at the same index after sorting
+    # Compare each object
+    for ($i = 0; $i -lt $sortedData1.Count; $i++) {
+        $object1 = $sortedData1[$i]
+        $object2 = $sortedData2[$i]
+
         $diff = Compare-JsonObjects -object1 $object1 -object2 $object2
         if ($diff.Count -gt 0) {
-            $differences += "Differences in object with State='$($object1.State)' and LGA='$($object1.LGA)':"
+            $differences += "Differences in object at index $i:"
             $differences += $diff
         }
     }
@@ -80,14 +72,14 @@ function Compare-JsonData {
 }
 
 # Compare the structures
-if ($structure1 -ne $structure2) {
+if ($sample1.Structure -ne $sample2.Structure) {
     Write-Output "The structures are different."
 } else {
     Write-Output "The structures are identical."
 }
 
-# Compare the data after sorting
-$differences = Compare-JsonData -data1 $data1 -data2 $data2
+# Compare the data
+$differences = Compare-JsonData -data1 $sample1.Data -data2 $sample2.Data
 
 # Output the results
 if ($differences.Count -eq 0) {
@@ -95,4 +87,3 @@ if ($differences.Count -eq 0) {
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
-}
