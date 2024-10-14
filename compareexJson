@@ -13,6 +13,10 @@ $data1 = $sample1[1]
 $structure2 = $sample2[0]
 $data2 = $sample2[1]
 
+# Sort the data based on 'State' and 'LGA'
+$data1 = $data1 | Sort-Object -Property State, LGA
+$data2 = $data2 | Sort-Object -Property State, LGA
+
 # Function to compare two JSON objects
 function Compare-JsonObjects {
     param (
@@ -60,27 +64,15 @@ function Compare-JsonData {
     }
 
     # Compare each object by matching "State" and "LGA"
-    foreach ($object1 in $data1) {
-        $matchingObject = $data2 | Where-Object { $_.State -eq $object1.State -and $_.LGA -eq $object1.LGA }
+    for ($i = 0; $i -lt $data1.Count; $i++) {
+        $object1 = $data1[$i]
+        $object2 = $data2[$i]
         
-        if ($matchingObject) {
-            # Compare the matching objects
-            $diff = Compare-JsonObjects -object1 $object1 -object2 $matchingObject
-            if ($diff.Count -gt 0) {
-                $differences += "Differences in object with State='$($object1.State)' and LGA='$($object1.LGA)':"
-                $differences += $diff
-            }
-        } else {
-            $differences += "Object with State='$($object1.State)' and LGA='$($object1.LGA)' found in sample1 but not in sample2."
-        }
-    }
-
-    # Check for objects present in sample2 but missing in sample1
-    foreach ($object2 in $data2) {
-        $matchingObject = $data1 | Where-Object { $_.State -eq $object2.State -and $_.LGA -eq $object2.LGA }
-        
-        if (-not $matchingObject) {
-            $differences += "Object with State='$($object2.State)' and LGA='$($object2.LGA)' found in sample2 but not in sample1."
+        # Compare the objects at the same index after sorting
+        $diff = Compare-JsonObjects -object1 $object1 -object2 $object2
+        if ($diff.Count -gt 0) {
+            $differences += "Differences in object with State='$($object1.State)' and LGA='$($object1.LGA)':"
+            $differences += $diff
         }
     }
 
@@ -94,7 +86,7 @@ if ($structure1 -ne $structure2) {
     Write-Output "The structures are identical."
 }
 
-# Compare the data
+# Compare the data after sorting
 $differences = Compare-JsonData -data1 $data1 -data2 $data2
 
 # Output the results
