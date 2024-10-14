@@ -20,7 +20,7 @@ if ($structure1 -ne $structure2) {
 }
 
 # Sort the data based on scalar fields from the structure (ensure fields are present)
-# Use PSObject.Properties[$property].Value to access the property in a safe manner
+# Use Get-Member to safely handle dynamic properties and avoid reference errors
 $sortableFields = $structure1 | Where-Object { 
     $data1[0].PSObject.Properties[$_] -and -not ($data1[0].PSObject.Properties[$_].Value -is [System.Collections.IEnumerable]) -and -not ($data1[0].PSObject.Properties[$_].Value -is [System.Object[]]) 
 }
@@ -28,6 +28,21 @@ $sortableFields = $structure1 | Where-Object {
 # Sort data1 and data2 using the scalar fields
 $data1 = $data1 | Sort-Object -Property $sortableFields
 $data2 = $data2 | Sort-Object -Property $sortableFields
+
+# Function to check if a property exists in an object and safely return its value
+function Get-PropertyValue {
+    param (
+        [Parameter(Mandatory=$true)] [pscustomobject]$object,
+        [Parameter(Mandatory=$true)] [string]$propertyName
+    )
+
+    # Check if the object has the property
+    if ($object.PSObject.Properties[$propertyName]) {
+        return $object.$propertyName
+    } else {
+        return $null
+    }
+}
 
 # Function to compare two JSON objects
 function Compare-JsonObjects {
@@ -46,12 +61,12 @@ function Compare-JsonObjects {
 
     # Compare each property
     foreach ($property in $allProperties) {
-        $value1 = $object1.PSObject.Properties[$property].Value
-        $value2 = $object2.PSObject.Properties[$property].Value
+        $value1 = Get-PropertyValue -object $object1 -propertyName $property
+        $value2 = Get-PropertyValue -object $object2 -propertyName $property
 
-        if (-not $object1.PSObject.Properties[$property]) {
+        if (-not $value1 -and $value2) {
             $differences += "Property '$property' found in object 2 but missing in object 1."
-        } elseif (-not $object2.PSObject.Properties[$property]) {
+        } elseif ($value1 -and -not $value2) {
             $differences += "Property '$property' found in object 1 but missing in object 2."
         } elseif ($value1 -ne $value2) {
             $differences += "Difference in property '$property': object1='$value1' object2='$value2'"
