@@ -21,7 +21,9 @@ if ($structure1 -ne $structure2) {
 
 # Sort the data based on scalar fields from the structure (ensure fields are present)
 # We will sort by all fields from the structure, prioritizing those that contain scalar values (e.g., string, int).
-$sortableFields = $structure1 | Where-Object { $data1[0].PSObject.Properties["$_"] -and -not ($data1[0]."$_" -is [System.Collections.IEnumerable]) }
+$sortableFields = $structure1 | Where-Object { 
+    $data1[0].PSObject.Properties["$_"] -and -not ($data1[0]."${_}" -is [System.Collections.IEnumerable]) -and -not ($data1[0]."${_}" -is [System.Object[]]) 
+}
 
 # Sort data1 and data2 using the scalar fields
 $data1 = $data1 | Sort-Object -Property $sortableFields
@@ -98,4 +100,3 @@ if ($differences.Count -eq 0) {
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
-}
