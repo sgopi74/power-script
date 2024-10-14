@@ -1,61 +1,100 @@
-# PowerShell script to compare two JSON files and print the differences
-
-# Define paths to the two JSON files (sample1 and sample2)
+v# Paths to the JSON files
 $sample1Path = "C:\path\to\sample1.json"
 $sample2Path = "C:\path\to\sample2.json"
 
-# Load and parse the JSON files
+# Load the JSON data
 $sample1 = Get-Content -Raw -Path $sample1Path | ConvertFrom-Json
 $sample2 = Get-Content -Raw -Path $sample2Path | ConvertFrom-Json
 
-# Function to compare two JSON objects recursively
-function Compare-Json {
+# Function to compare two JSON objects
+function Compare-JsonObjects {
     param (
         [Parameter(Mandatory=$true)]
-        [pscustomobject]$json1,
+        [pscustomobject]$object1,
         
         [Parameter(Mandatory=$true)]
-        [pscustomobject]$json2
+        [pscustomobject]$object2
     )
-    
+
     $differences = @()
 
-    # Check if the structure or content is different
-    if ($json1 -ne $json2) {
-        # Loop through the keys in the first JSON
-        foreach ($key in $json1.PSObject.Properties.Name) {
-            if ($json2.PSObject.Properties.Name -notcontains $key) {
-                $differences += "Key '$key' found in sample1 but not in sample2"
-            } elseif ($json1.$key -is [System.Collections.IEnumerable] -and $json2.$key -is [System.Collections.IEnumerable]) {
-                # If both are arrays, compare each element
-                for ($i = 0; $i -lt [Math]::Min($json1.$key.Count, $json2.$key.Count); $i++) {
-                    $diff = Compare-Json -json1 $json1.$key[$i] -json2 $json2.$key[$i]
-                    if ($diff) {
-                        $differences += "Difference at index $i in key '$key': $diff"
-                    }
-                }
-            } elseif ($json1.$key -ne $json2.$key) {
-                $differences += "Difference in key '$key': sample1='$($json1.$key)' sample2='$($json2.$key)'"
-            }
-        }
-        # Check if there are extra keys in the second JSON
-        foreach ($key in $json2.PSObject.Properties.Name) {
-            if ($json1.PSObject.Properties.Name -notcontains $key) {
-                $differences += "Key '$key' found in sample2 but not in sample1"
-            }
+    # Get all property names from both objects
+    $allProperties = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) | Sort-Object -Unique
+
+    # Compare each property
+    foreach ($property in $allProperties) {
+        if (-not $object1.PSObject.Properties[$property]) {
+            $differences += "Property '$property' found in object 2 but missing in object 1."
+        } elseif (-not $object2.PSObject.Properties[$property]) {
+            $differences += "Property '$property' found in object 1 but missing in object 2."
+        } elseif ($object1.$property -ne $object2.$property) {
+            $differences += "Difference in property '$property': object1='$($object1.$property)' object2='$($object2.$property)'"
         }
     }
 
     return $differences
 }
 
-# Compare the two JSON objects
-$diffs = Compare-Json -json1 $sample1 -json2 $sample2
+# Function to compare two datasets (array of objects)
+function Compare-JsonData {
+    param (
+        [Parameter(Mandatory=$true)]
+        [array]$data1,
+        
+        [Parameter(Mandatory=$true)]
+        [array]$data2
+    )
 
-# Output the differences
-if ($diffs.Count -eq 0) {
+    $differences = @()
+
+    # Compare object count
+    if ($data1.Count -ne $data2.Count) {
+        $differences += "The number of objects differs: sample1=$($data1.Count) sample2=$($data2.Count)"
+    }
+
+    # Compare each object by matching "State" and "LGA"
+    foreach ($object1 in $data1) {
+        $matchingObject = $data2 | Where-Object { $_.State -eq $object1.State -and $_.LGA -eq $object1.LGA }
+        
+        if ($matchingObject) {
+            # Compare the matching objects
+            $diff = Compare-JsonObjects -object1 $object1 -object2 $matchingObject
+            if ($diff.Count -gt 0) {
+                $differences += "Differences in object with State='$($object1.State)' and LGA='$($object1.LGA)':"
+                $differences += $diff
+            }
+        } else {
+            $differences += "Object with State='$($object1.State)' and LGA='$($object1.LGA)' found in sample1 but not in sample2."
+        }
+    }
+
+    # Check for objects present in sample2 but missing in sample1
+    foreach ($object2 in $data2) {
+        $matchingObject = $data1 | Where-Object { $_.State -eq $object2.State -and $_.LGA -eq $object2.LGA }
+        
+        if (-not $matchingObject) {
+            $differences += "Object with State='$($object2.State)' and LGA='$($object2.LGA)' found in sample2 but not in sample1."
+        }
+    }
+
+    return $differences
+}
+
+# Compare the structures
+if ($sample1.Structure -ne $sample2.Structure) {
+    Write-Output "The structures are different."
+} else {
+    Write-Output "The structures are identical."
+}
+
+# Compare the data
+$differences = Compare-JsonData -data1 $sample1.Data -data2 $sample2.Data
+
+# Output the results
+if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are identical."
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
-    $diffs | ForEach-Object { Write-Output $_ }
+    $differences | ForEach-Object { Write-Output $_ }
 }
+
