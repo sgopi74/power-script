@@ -1,0 +1,61 @@
+# PowerShell script to compare two JSON files and print the differences
+
+# Define paths to the two JSON files (sample1 and sample2)
+$sample1Path = "C:\path\to\sample1.json"
+$sample2Path = "C:\path\to\sample2.json"
+
+# Load and parse the JSON files
+$sample1 = Get-Content -Raw -Path $sample1Path | ConvertFrom-Json
+$sample2 = Get-Content -Raw -Path $sample2Path | ConvertFrom-Json
+
+# Function to compare two JSON objects recursively
+function Compare-Json {
+    param (
+        [Parameter(Mandatory=$true)]
+        [pscustomobject]$json1,
+        
+        [Parameter(Mandatory=$true)]
+        [pscustomobject]$json2
+    )
+    
+    $differences = @()
+
+    # Check if the structure or content is different
+    if ($json1 -ne $json2) {
+        # Loop through the keys in the first JSON
+        foreach ($key in $json1.PSObject.Properties.Name) {
+            if ($json2.PSObject.Properties.Name -notcontains $key) {
+                $differences += "Key '$key' found in sample1 but not in sample2"
+            } elseif ($json1.$key -is [System.Collections.IEnumerable] -and $json2.$key -is [System.Collections.IEnumerable]) {
+                # If both are arrays, compare each element
+                for ($i = 0; $i -lt [Math]::Min($json1.$key.Count, $json2.$key.Count); $i++) {
+                    $diff = Compare-Json -json1 $json1.$key[$i] -json2 $json2.$key[$i]
+                    if ($diff) {
+                        $differences += "Difference at index $i in key '$key': $diff"
+                    }
+                }
+            } elseif ($json1.$key -ne $json2.$key) {
+                $differences += "Difference in key '$key': sample1='$($json1.$key)' sample2='$($json2.$key)'"
+            }
+        }
+        # Check if there are extra keys in the second JSON
+        foreach ($key in $json2.PSObject.Properties.Name) {
+            if ($json1.PSObject.Properties.Name -notcontains $key) {
+                $differences += "Key '$key' found in sample2 but not in sample1"
+            }
+        }
+    }
+
+    return $differences
+}
+
+# Compare the two JSON objects
+$diffs = Compare-Json -json1 $sample1 -json2 $sample2
+
+# Output the differences
+if ($diffs.Count -eq 0) {
+    Write-Output "The two JSON files are identical."
+} else {
+    Write-Output "The two JSON files are not identical. Differences:"
+    $diffs | ForEach-Object { Write-Output $_ }
+}
