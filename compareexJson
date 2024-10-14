@@ -20,7 +20,7 @@ if ($structure1 -ne $structure2) {
 }
 
 # Sort the data based on scalar fields from the structure (ensure fields are present)
-# Use GetPropertyValue to dynamically access the property in a safe manner
+# Use PSObject.Properties[$property].Value to access the property in a safe manner
 $sortableFields = $structure1 | Where-Object { 
     $data1[0].PSObject.Properties[$_] -and -not ($data1[0].PSObject.Properties[$_].Value -is [System.Collections.IEnumerable]) -and -not ($data1[0].PSObject.Properties[$_].Value -is [System.Object[]]) 
 }
@@ -82,7 +82,7 @@ function Compare-JsonData {
     for ($i = 0; $i -lt $data1.Count; $i++) {
         $object1 = $data1[$i]
         $object2 = $data2[$i]
-        
+
         # Compare the objects at the same index after sorting
         $diff = Compare-JsonObjects -object1 $object1 -object2 $object2
         if ($diff.Count -gt 0) {
