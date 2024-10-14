@@ -20,9 +20,9 @@ if ($structure1 -ne $structure2) {
 }
 
 # Sort the data based on scalar fields from the structure (ensure fields are present)
-# We will sort by all fields from the structure, prioritizing those that contain scalar values (e.g., string, int).
+# Use GetPropertyValue to dynamically access the property in a safe manner
 $sortableFields = $structure1 | Where-Object { 
-    $data1[0].PSObject.Properties["$_"] -and -not ($data1[0]."${_}" -is [System.Collections.IEnumerable]) -and -not ($data1[0]."${_}" -is [System.Object[]]) 
+    $data1[0].PSObject.Properties[$_] -and -not ($data1[0].PSObject.Properties[$_].Value -is [System.Collections.IEnumerable]) -and -not ($data1[0].PSObject.Properties[$_].Value -is [System.Object[]]) 
 }
 
 # Sort data1 and data2 using the scalar fields
@@ -46,12 +46,15 @@ function Compare-JsonObjects {
 
     # Compare each property
     foreach ($property in $allProperties) {
+        $value1 = $object1.PSObject.Properties[$property].Value
+        $value2 = $object2.PSObject.Properties[$property].Value
+
         if (-not $object1.PSObject.Properties[$property]) {
             $differences += "Property '$property' found in object 2 but missing in object 1."
         } elseif (-not $object2.PSObject.Properties[$property]) {
             $differences += "Property '$property' found in object 1 but missing in object 2."
-        } elseif ($object1.$property -ne $object2.$property) {
-            $differences += "Difference in property '$property': object1='$($object1.$property)' object2='$($object2.$property)'"
+        } elseif ($value1 -ne $value2) {
+            $differences += "Difference in property '$property': object1='$value1' object2='$value2'"
         }
     }
 
