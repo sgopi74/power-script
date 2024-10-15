@@ -38,3 +38,12 @@ $onlyInFile1 | ForEach-Object { Write-Output $_ }
 
 Write-Output "`nWords only in file 2:"
 $onlyInFile2 | ForEach-Object { Write-Output $_ }
+
+PS C:\Users\SGK352\Downloads\JsonTest> .\CompareJson.ps1
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:39 char:52
++ $onlyInFile2 | ForEach-Object { Write-Output $_ }_ }
++                                                    ~
+Unexpected token '}' in expression or statement.
+    + CategoryInfo          : ParserError: (:) [], ParseException
+    + FullyQualifiedErrorId : UnexpectedToken
+
