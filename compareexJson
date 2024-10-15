@@ -21,7 +21,7 @@ function Get-PropertyValue {
     }
 }
 
-# Function to compare two JSON objects
+# Function to compare two JSON objects, ignoring system properties
 function Compare-JsonObjects {
     param (
         [Parameter(Mandatory=$true)]
@@ -33,8 +33,11 @@ function Compare-JsonObjects {
 
     $differences = @()
 
-    # Get all property names from both objects
-    $allProperties = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) | Sort-Object -Unique
+    # Get all property names from both objects, excluding system properties
+    $ignoreProperties = @('SyncRoot', 'IsFixedSize', 'IsReadOnly', 'IsSynchronized', 'Count')
+    $allProperties = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) |
+                     Where-Object { $ignoreProperties -notcontains $_ } |
+                     Sort-Object -Unique
 
     # Compare each property
     foreach ($property in $allProperties) {
@@ -113,7 +116,3 @@ if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
 }
-
-The two JSON files are not identical. Differences:
-Differences in object at index 0:
-Difference in property 'SyncRoot': object1='State SA2 SupportCategory Group SubGroup Concentration Payments CommittedSupports Utilisation' object2='State SA2 SupportCategory Group SubGroup Concentration Payments CommittedSupports Utilisation'
