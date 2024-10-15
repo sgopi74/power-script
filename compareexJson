@@ -100,7 +100,8 @@ function Compare-JsonData {
         # Compare the objects at the same index after sorting
         $diff = Compare-JsonObjects -object1 $object1 -object2 $object2
         if ($diff.Count -gt 0) {
-            $differences += "Differences in object at index $i:"
+            # Use ${i} to delimit the variable in the string
+            $differences += "Differences in object at index ${i}:"
             $differences += $diff
         }
     }
@@ -108,11 +109,13 @@ function Compare-JsonData {
     # If one dataset has extra objects, report them
     if ($data1.Count -gt $data2.Count) {
         for ($i = $data2.Count; $i -lt $data1.Count; $i++) {
-            $differences += "Extra object in sample1 at index $i: $($data1[$i])"
+            # Use ${i} to delimit the variable in the string
+            $differences += "Extra object in sample1 at index ${i}: $($data1[$i])"
         }
     } elseif ($data2.Count -gt $data1.Count) {
         for ($i = $data1.Count; $i -lt $data2.Count; $i++) {
-            $differences += "Extra object in sample2 at index $i: $($data2[$i])"
+            # Use ${i} to delimit the variable in the string
+            $differences += "Extra object in sample2 at index ${i}: $($data2[$i])"
         }
     }
 
@@ -129,19 +132,3 @@ if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
 }
-
-
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:103 char:61
-+             $differences += "Differences in object at index $i:"
-+                                                             ~~~
-Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:111 char:63
-+ ...         $differences += "Extra object in sample1 at index $i: $($data ...
-+                                                               ~~~
-Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:115 char:63
-+ ...         $differences += "Extra object in sample2 at index $i: $($data ...
-+                                                               ~~~
-Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
-    + CategoryInfo          : ParserError: (:) [], ParseException
-    + FullyQualifiedErrorId : InvalidVariableReferenceWithDrive
