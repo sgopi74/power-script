@@ -1,0 +1,33 @@
+
+# Load the file contents
+$file1Content = Get-Content -Path $file1Path -Raw
+$file2Content = Get-Content -Path $file2Path -Raw
+
+# Function to split content into words and symbols (considering punctuation as separate tokens)
+function Split-Text {
+    param (
+        [Parameter(Mandatory=$true)] [string]$content
+    )
+    
+    # Use regex to split by words and symbols, keeping punctuation as separate tokens
+    return $content -split '(\W)'
+}
+
+# Split the content of both files into words and symbols
+$file1Tokens = Split-Text -content $file1Content
+$file2Tokens = Split-Text -content $file2Content
+
+# Remove empty strings that may result from the split
+$file1Tokens = $file1Tokens | Where-Object { $_ -ne '' }
+$file2Tokens = $file2Tokens | Where-Object { $_ -ne '' }
+
+# Compare both files
+$onlyInFile1 = $file1Tokens | Where-Object { $_ -notin $file2Tokens }
+$onlyInFile2 = $file2Tokens | Where-Object { $_ -notin $file1Tokens }
+
+# Output the differences
+Write-Output "Words or symbols only in file 1:"
+$onlyInFile1 | ForEach-Object { Write-Output $_ }
+
+Write-Output "`nWords or symbols only in file 2:"
+$onlyInFile2 | ForEach-Object { Write-Output $_ }
