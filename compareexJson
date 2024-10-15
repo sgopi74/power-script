@@ -93,7 +93,7 @@ function Compare-JsonData {
     }
 
     # Compare each object by index (since they are now sorted)
-    for ($i = 0; $i -lt $data1.Count; $i++) {
+    for ($i = 0; $i -lt [Math]::Min($data1.Count, $data2.Count); $i++) {
         $object1 = $data1[$i]
         $object2 = $data2[$i]
 
@@ -102,6 +102,17 @@ function Compare-JsonData {
         if ($diff.Count -gt 0) {
             $differences += "Differences in object at index $i:"
             $differences += $diff
+        }
+    }
+
+    # If one dataset has extra objects, report them
+    if ($data1.Count -gt $data2.Count) {
+        for ($i = $data2.Count; $i -lt $data1.Count; $i++) {
+            $differences += "Extra object in sample1 at index $i: $($data1[$i])"
+        }
+    } elseif ($data2.Count -gt $data1.Count) {
+        for ($i = $data1.Count; $i -lt $data2.Count; $i++) {
+            $differences += "Extra object in sample2 at index $i: $($data2[$i])"
         }
     }
 
@@ -117,3 +128,4 @@ if ($differences.Count -eq 0) {
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
+}
