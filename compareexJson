@@ -6,7 +6,7 @@ $json2Path = "C:\path\to\file2.json"
 $json1 = Get-Content -Raw -Path $json1Path | ConvertFrom-Json
 $json2 = Get-Content -Raw -Path $json2Path | ConvertFrom-Json
 
-# Function to compare two JSON objects recursively
+# Function to recursively compare two JSON objects (keys and values, ignoring order)
 function Compare-Json {
     param (
         [Parameter(Mandatory=$true)] [pscustomobject]$json1,
@@ -33,9 +33,47 @@ function Compare-Json {
         } elseif ($value1 -is [pscustomobject] -and $value2 -is [pscustomobject]) {
             # If both values are objects, recursively compare them
             $differences += Compare-Json -json1 $value1 -json2 $value2 -path $currentPath
+        } elseif ($value1 -is [array] -and $value2 -is [array]) {
+            # If both values are arrays, compare them ignoring order
+            $differenceInArray = Compare-JsonArrays -array1 $value1 -array2 $value2 -path $currentPath
+            if ($differenceInArray) {
+                $differences += $differenceInArray
+            }
         } elseif ($value1 -ne $value2) {
             # If the values are different, report the difference
             $differences += "Difference at '$currentPath': '$value1' (file1) vs '$value2' (file2)"
+        }
+    }
+
+    return $differences
+}
+
+# Function to compare two arrays (ignoring order)
+function Compare-JsonArrays {
+    param (
+        [Parameter(Mandatory=$true)] [array]$array1,
+        [Parameter(Mandatory=$true)] [array]$array2,
+        [string]$path
+    )
+
+    $differences = @()
+
+    # Sort both arrays to ignore order
+    $sortedArray1 = $array1 | Sort-Object
+    $sortedArray2 = $array2 | Sort-Object
+
+    if ($sortedArray1.Count -ne $sortedArray2.Count) {
+        $differences += "Array length mismatch at '$path': ${sortedArray1.Count} elements in file1, ${sortedArray2.Count} elements in file2"
+    }
+
+    for ($i = 0; $i -lt $sortedArray1.Count; $i++) {
+        $value1 = $sortedArray1[$i]
+        $value2 = $sortedArray2[$i]
+
+        if ($value1 -is [pscustomobject] -and $value2 -is [pscustomobject]) {
+            $differences += Compare-Json -json1 $value1 -json2 $value2 -path "$path[$i]"
+        } elseif ($value1 -ne $value2) {
+            $differences += "Difference in array at '$path[$i]': '$value1' (file1) vs '$value2' (file2)"
         }
     }
 
@@ -51,3 +89,4 @@ if ($differences.Count -eq 0) {
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
+}
