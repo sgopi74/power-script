@@ -90,3 +90,13 @@ if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
 }
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:23 char:51
++         $value1 = $json1.PSObject.Properties[$key]?.Value
++                                                   ~~~~~~~
+Unexpected token '?.Value' in expression or statement.
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:24 char:51
++         $value2 = $json2.PSObject.Properties[$key]?.Value
++                                                   ~~~~~~~
+Unexpected token '?.Value' in expression or statement.
+    + CategoryInfo          : ParserError: (:) [], ParseException
+    + FullyQualifiedErrorId : UnexpectedToken
