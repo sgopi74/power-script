@@ -70,8 +70,11 @@ function Compare-JsonData {
         $differences += "The number of objects differs: sample1=$($data1.Count) sample2=$($data2.Count)"
     }
 
+    # Replace [Math]::Min with a custom min function using PowerShell
+    $minCount = if ($data1.Count -lt $data2.Count) { $data1.Count } else { $data2.Count }
+
     # Compare each object by index (since they are now sorted)
-    for ($i = 0; $i -lt [Math]::Min($data1.Count, $data2.Count); $i++) {
+    for ($i = 0; $i -lt $minCount; $i++) {
         $object1 = $data1[$i]
         $object2 = $data2[$i]
 
@@ -109,11 +112,4 @@ if ($differences.Count -eq 0) {
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
-} 
-
-  Cannot invoke method. Method invocation is supported only on core types in this language mode.
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:74 char:18
-+ ...   for ($i = 0; $i -lt [Math]::Min($data1.Count, $data2.Count); $i++)  ...
-+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
-    + FullyQualifiedErrorId : MethodInvocationNotSupportedInConstrainedLanguage 
+}
