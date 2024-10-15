@@ -6,7 +6,10 @@ $json2Path = "C:\path\to\file2.json"
 $json1 = Get-Content -Raw -Path $json1Path | ConvertFrom-Json
 $json2 = Get-Content -Raw -Path $json2Path | ConvertFrom-Json
 
-# Function to recursively compare two JSON objects (keys and values, ignoring order)
+# Define a list of system properties to ignore
+$ignoreProperties = @('SyncRoot', 'IsFixedSize', 'IsReadOnly', 'IsSynchronized', 'Count')
+
+# Function to recursively compare two JSON objects (keys and values, ignoring order and system properties)
 function Compare-Json {
     param (
         [Parameter(Mandatory=$true)] [pscustomobject]$json1,
@@ -16,8 +19,10 @@ function Compare-Json {
 
     $differences = @()
 
-    # Get all keys from both JSON objects
-    $allKeys = ($json1.PSObject.Properties.Name + $json2.PSObject.Properties.Name) | Sort-Object -Unique
+    # Get all keys from both JSON objects, excluding system properties
+    $allKeys = ($json1.PSObject.Properties.Name + $json2.PSObject.Properties.Name) |
+                Where-Object { $ignoreProperties -notcontains $_ } | 
+                Sort-Object -Unique
 
     foreach ($key in $allKeys) {
         # Instead of using ?. operator, do null checks manually
