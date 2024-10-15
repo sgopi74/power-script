@@ -111,4 +111,9 @@ if ($differences.Count -eq 0) {
     $differences | ForEach-Object { Write-Output $_ }
 } 
 
-   
+  Cannot invoke method. Method invocation is supported only on core types in this language mode.
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:74 char:18
++ ...   for ($i = 0; $i -lt [Math]::Min($data1.Count, $data2.Count); $i++)  ...
++                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : MethodInvocationNotSupportedInConstrainedLanguage 
