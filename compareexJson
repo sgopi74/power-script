@@ -105,3 +105,16 @@ if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
 }
+ConvertFrom-Json : Invalid JSON primitive: .
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:6 char:46
++ $json1 = Get-Content -Raw -Path $json1Path | ConvertFrom-Json
++                                              ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [ConvertFrom-Json], ArgumentException
+    + FullyQualifiedErrorId : System.ArgumentException,Microsoft.PowerShell.Commands.ConvertFromJsonCommand
+
+Compare-Json : Cannot bind argument to parameter 'json1' because it is null.
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:99 char:36
++ $differences = Compare-Json -json1 $json1 -json2 $json2
++                                    ~~~~~~
+    + CategoryInfo          : InvalidData: (:) [Compare-Json], ParameterBindingValidationException
+    + FullyQualifiedErrorId : ParameterArgumentValidationErrorNullNotAllowed,Compare-Json
