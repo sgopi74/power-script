@@ -1,7 +1,22 @@
 
+# Paths to the text files
+$file1Path = "C:\path\to\file1.txt"
+$file2Path = "C:\path\to\file2.txt"
+
 # Load the file contents
 $file1Content = Get-Content -Path $file1Path -Raw
 $file2Content = Get-Content -Path $file2Path -Raw
+
+# Check if either file content is empty
+if ([string]::IsNullOrWhiteSpace($file1Content)) {
+    Write-Output "File 1 is empty or could not be read."
+    return
+}
+
+if ([string]::IsNullOrWhiteSpace($file2Content)) {
+    Write-Output "File 2 is empty or could not be read."
+    return
+}
 
 # Function to split content into words and symbols (considering punctuation as separate tokens)
 function Split-Text {
@@ -31,16 +46,3 @@ $onlyInFile1 | ForEach-Object { Write-Output $_ }
 
 Write-Output "`nWords or symbols only in file 2:"
 $onlyInFile2 | ForEach-Object { Write-Output $_ }
-Split-Text : Cannot bind argument to parameter 'content' because it is an empty string.
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:16 char:36
-+ $file1Tokens = Split-Text -content $file1Content
-+                                    ~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidData: (:) [Split-Text], ParameterBindingValidationException
-    + FullyQualifiedErrorId : ParameterArgumentValidationErrorEmptyStringNotAllowed,Split-Text
-
-Split-Text : Cannot bind argument to parameter 'content' because it is an empty string.
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:17 char:36
-+ $file2Tokens = Split-Text -content $file2Content
-+                                    ~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidData: (:) [Split-Text], ParameterBindingValidationException
-    + FullyQualifiedErrorId : ParameterArgumentValidationErrorEmptyStringNotAllowed,Split-Text
