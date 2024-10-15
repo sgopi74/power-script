@@ -31,3 +31,16 @@ $onlyInFile1 | ForEach-Object { Write-Output $_ }
 
 Write-Output "`nWords or symbols only in file 2:"
 $onlyInFile2 | ForEach-Object { Write-Output $_ }
+Split-Text : Cannot bind argument to parameter 'content' because it is an empty string.
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:16 char:36
++ $file1Tokens = Split-Text -content $file1Content
++                                    ~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidData: (:) [Split-Text], ParameterBindingValidationException
+    + FullyQualifiedErrorId : ParameterArgumentValidationErrorEmptyStringNotAllowed,Split-Text
+
+Split-Text : Cannot bind argument to parameter 'content' because it is an empty string.
+At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:17 char:36
++ $file2Tokens = Split-Text -content $file2Content
++                                    ~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidData: (:) [Split-Text], ParameterBindingValidationException
+    + FullyQualifiedErrorId : ParameterArgumentValidationErrorEmptyStringNotAllowed,Split-Text
