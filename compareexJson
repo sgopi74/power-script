@@ -1,16 +1,72 @@
 # Paths to the JSON files
-$json1Path = "C:\path\to\file1.json"
-$json2Path = "C:\path\to\file2.json"
+$file1Path = "C:\path\to\file1.json"
+$file2Path = "C:\path\to\file2.json"
 
-# Load the JSON data
-$json1 = Get-Content -Raw -Path $json1Path | ConvertFrom-Json
-$json2 = Get-Content -Raw -Path $json2Path | ConvertFrom-Json
+# Load the file contents and treat them as JSON
+try {
+    $file1Content = Get-Content -Raw -Path $file1Path | ConvertFrom-Json
+    $file2Content = Get-Content -Raw -Path $file2Path | ConvertFrom-Json
+}
+catch {
+    Write-Output "Error: Unable to read or parse one of the JSON files. Please check the file contents."
+    return
+}
 
-# Define a list of system properties to ignore
-$ignoreProperties = @('SyncRoot', 'IsFixedSize', 'IsReadOnly', 'IsSynchronized', 'Count')
+# Function to remove the top-level array of field names (if it exists)
+function Remove-TopLevelArray {
+    param (
+        [Parameter(Mandatory=$true)] $jsonContent
+    )
 
-# Function to recursively compare two JSON objects (keys and values, ignoring order and system properties)
-function Compare-Json {
+    # Check if the first element is an array and contains strings (field names)
+    if ($jsonContent[0] -is [array]) {
+        $isFieldNameArray = $true
+        foreach ($item in $jsonContent[0]) {
+            if (-not ($item -is [string])) {
+                $isFieldNameArray = $false
+                break
+            }
+        }
+        # If it's a field name array, remove the first element
+        if ($isFieldNameArray) {
+            return $jsonContent | Select-Object -Skip 1
+        }
+    }
+    return $jsonContent
+}
+
+# Remove the top-level array of field names if it exists
+$file1Content = Remove-TopLevelArray -jsonContent $file1Content
+$file2Content = Remove-TopLevelArray -jsonContent $file2Content
+
+# Function to compare two JSON objects, arrays, or values
+function Compare-JsonValues {
+    param (
+        [Parameter(Mandatory=$true)] $value1,
+        [Parameter(Mandatory=$true)] $value2,
+        [string]$path = ""
+    )
+
+    $differences = @()
+
+    if ($value1 -is [pscustomobject] -and $value2 -is [pscustomobject]) {
+        # If both are objects, compare them recursively
+        $differences += Compare-JsonObjects -json1 $value1 -json2 $value2 -path $path
+    }
+    elseif ($value1 -is [array] -and $value2 -is [array]) {
+        # If both are arrays, compare arrays ignoring order
+        $differences += Compare-JsonArrays -array1 $value1 -array2 $value2 -path $path
+    }
+    elseif ($value1 -ne $value2) {
+        # If they are simple values, compare them directly
+        $differences += "Difference at '$path': '$value1' (file1) vs '$value2' (file2)"
+    }
+
+    return $differences
+}
+
+# Function to recursively compare two JSON objects (keys and values, ignoring order)
+function Compare-JsonObjects {
     param (
         [Parameter(Mandatory=$true)] [pscustomobject]$json1,
         [Parameter(Mandatory=$true)] [pscustomobject]$json2,
@@ -19,23 +75,19 @@ function Compare-Json {
 
     $differences = @()
 
-    # Get all keys from both JSON objects, excluding system properties
-    $allKeys = ($json1.PSObject.Properties.Name + $json2.PSObject.Properties.Name) |
-                Where-Object { $ignoreProperties -notcontains $_ } | 
-                Sort-Object -Unique
+    # Get all keys from both JSON objects
+    $allKeys = ($json1.PSObject.Properties.Name + $json2.PSObject.Properties.Name) | Sort-Object -Unique
 
     foreach ($key in $allKeys) {
-        # Instead of using ?. operator, do null checks manually
+        $value1 = $null
+        $value2 = $null
+
+        # Instead of ?. operator, manually check for properties
         if ($json1.PSObject.Properties[$key]) {
             $value1 = $json1.PSObject.Properties[$key].Value
-        } else {
-            $value1 = $null
         }
-
         if ($json2.PSObject.Properties[$key]) {
             $value2 = $json2.PSObject.Properties[$key].Value
-        } else {
-            $value2 = $null
         }
 
         $currentPath = if ($path) { "$path.$key" } else { $key }
@@ -45,25 +97,16 @@ function Compare-Json {
             $differences += "Key '$currentPath' is missing in the first file but exists in the second."
         } elseif ($null -eq $value2) {
             $differences += "Key '$currentPath' is missing in the second file but exists in the first."
-        } elseif ($value1 -is [pscustomobject] -and $value2 -is [pscustomobject]) {
-            # If both values are objects, recursively compare them
-            $differences += Compare-Json -json1 $value1 -json2 $value2 -path $currentPath
-        } elseif ($value1 -is [array] -and $value2 -is [array]) {
-            # If both values are arrays, compare them ignoring order
-            $differenceInArray = Compare-JsonArrays -array1 $value1 -array2 $value2 -path $currentPath
-            if ($differenceInArray) {
-                $differences += $differenceInArray
-            }
-        } elseif ($value1 -ne $value2) {
-            # If the values are different, report the difference
-            $differences += "Difference at '$currentPath': '$value1' (file1) vs '$value2' (file2)"
+        } else {
+            # Compare the values of the key
+            $differences += Compare-JsonValues -value1 $value1 -value2 $value2 -path $currentPath
         }
     }
 
     return $differences
 }
 
-# Function to compare two arrays (ignoring order)
+# Function to compare two arrays, ignoring the order of elements
 function Compare-JsonArrays {
     param (
         [Parameter(Mandatory=$true)] [array]$array1,
@@ -73,7 +116,7 @@ function Compare-JsonArrays {
 
     $differences = @()
 
-    # Sort both arrays to ignore order
+    # Sort both arrays to compare them ignoring the order
     $sortedArray1 = $array1 | Sort-Object
     $sortedArray2 = $array2 | Sort-Object
 
@@ -85,18 +128,14 @@ function Compare-JsonArrays {
         $value1 = $sortedArray1[$i]
         $value2 = $sortedArray2[$i]
 
-        if ($value1 -is [pscustomobject] -and $value2 -is [pscustomobject]) {
-            $differences += Compare-Json -json1 $value1 -json2 $value2 -path "$path[$i]"
-        } elseif ($value1 -ne $value2) {
-            $differences += "Difference in array at '$path[$i]': '$value1' (file1) vs '$value2' (file2)"
-        }
+        $differences += Compare-JsonValues -value1 $value1 -value2 $value2 -path "$path[$i]"
     }
 
     return $differences
 }
 
 # Compare the two JSON files
-$differences = Compare-Json -json1 $json1 -json2 $json2
+$differences = Compare-JsonValues -value1 $file1Content -value2 $file2Content
 
 # Output the results
 if ($differences.Count -eq 0) {
@@ -105,16 +144,3 @@ if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
 }
-ConvertFrom-Json : Invalid JSON primitive: .
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:6 char:46
-+ $json1 = Get-Content -Raw -Path $json1Path | ConvertFrom-Json
-+                                              ~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (:) [ConvertFrom-Json], ArgumentException
-    + FullyQualifiedErrorId : System.ArgumentException,Microsoft.PowerShell.Commands.ConvertFromJsonCommand
-
-Compare-Json : Cannot bind argument to parameter 'json1' because it is null.
-At C:\Users\SGK352\Downloads\JsonTest\CompareJson.ps1:99 char:36
-+ $differences = Compare-Json -json1 $json1 -json2 $json2
-+                                    ~~~~~~
-    + CategoryInfo          : InvalidData: (:) [Compare-Json], ParameterBindingValidationException
-    + FullyQualifiedErrorId : ParameterArgumentValidationErrorNullNotAllowed,Compare-Json
