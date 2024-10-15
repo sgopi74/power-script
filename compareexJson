@@ -1,113 +1,49 @@
 # Paths to the JSON files
-$sample1Path = "C:\path\to\sample1.json"
-$sample2Path = "C:\path\to\sample2.json"
+$json1Path = "C:\path\to\file1.json"
+$json2Path = "C:\path\to\file2.json"
 
 # Load the JSON data
-$sample1 = Get-Content -Raw -Path $sample1Path | ConvertFrom-Json
-$sample2 = Get-Content -Raw -Path $sample2Path | ConvertFrom-Json
+$json1 = Get-Content -Raw -Path $json1Path | ConvertFrom-Json
+$json2 = Get-Content -Raw -Path $json2Path | ConvertFrom-Json
 
-# Function to check if a property exists in an object and safely return its value
-function Get-PropertyValue {
+# Function to compare two JSON objects recursively
+function Compare-Json {
     param (
-        [Parameter(Mandatory=$true)] [pscustomobject]$object,
-        [Parameter(Mandatory=$true)] [string]$propertyName
-    )
-
-    # Check if the object has the property
-    if ($object.PSObject.Properties[$propertyName]) {
-        return $object.PSObject.Properties[$propertyName].Value
-    } else {
-        return $null
-    }
-}
-
-# Function to compare two JSON objects, ignoring system properties
-function Compare-JsonObjects {
-    param (
-        [Parameter(Mandatory=$true)]
-        [pscustomobject]$object1,
-        
-        [Parameter(Mandatory=$true)]
-        [pscustomobject]$object2
+        [Parameter(Mandatory=$true)] [pscustomobject]$json1,
+        [Parameter(Mandatory=$true)] [pscustomobject]$json2,
+        [string]$path = ""
     )
 
     $differences = @()
 
-    # Get all property names from both objects, excluding system properties
-    $ignoreProperties = @('SyncRoot', 'IsFixedSize', 'IsReadOnly', 'IsSynchronized', 'Count')
-    $allProperties = ($object1.PSObject.Properties.Name + $object2.PSObject.Properties.Name) |
-                     Where-Object { $ignoreProperties -notcontains $_ } |
-                     Sort-Object -Unique
+    # Get all keys from both JSON objects
+    $allKeys = ($json1.PSObject.Properties.Name + $json2.PSObject.Properties.Name) | Sort-Object -Unique
 
-    # Compare each property
-    foreach ($property in $allProperties) {
-        $value1 = Get-PropertyValue -object $object1 -propertyName $property
-        $value2 = Get-PropertyValue -object $object2 -propertyName $property
+    foreach ($key in $allKeys) {
+        $value1 = $json1.PSObject.Properties[$key]?.Value
+        $value2 = $json2.PSObject.Properties[$key]?.Value
 
-        if ($value1 -eq $null -and $value2 -ne $null) {
-            $differences += "Property '$property' found in object 2 but missing in object 1."
-        } elseif ($value1 -ne $null -and $value2 -eq $null) {
-            $differences += "Property '$property' found in object 1 but missing in object 2."
+        $currentPath = if ($path) { "$path.$key" } else { $key }
+
+        # Check if the key exists in both JSON objects
+        if ($null -eq $value1) {
+            $differences += "Key '$currentPath' is missing in the first file but exists in the second."
+        } elseif ($null -eq $value2) {
+            $differences += "Key '$currentPath' is missing in the second file but exists in the first."
+        } elseif ($value1 -is [pscustomobject] -and $value2 -is [pscustomobject]) {
+            # If both values are objects, recursively compare them
+            $differences += Compare-Json -json1 $value1 -json2 $value2 -path $currentPath
         } elseif ($value1 -ne $value2) {
-            $differences += "Difference in property '$property': object1='$value1' object2='$value2'"
+            # If the values are different, report the difference
+            $differences += "Difference at '$currentPath': '$value1' (file1) vs '$value2' (file2)"
         }
     }
 
     return $differences
 }
 
-# Function to compare two datasets (array of objects)
-function Compare-JsonData {
-    param (
-        [Parameter(Mandatory=$true)]
-        [array]$data1,
-        
-        [Parameter(Mandatory=$true)]
-        [array]$data2
-    )
-
-    $differences = @()
-
-    # Compare object count
-    if ($data1.Count -ne $data2.Count) {
-        $differences += "The number of objects differs: sample1=$($data1.Count) sample2=$($data2.Count)"
-    }
-
-    # Replace [Math]::Min with a custom min function using PowerShell
-    $minCount = if ($data1.Count -lt $data2.Count) { $data1.Count } else { $data2.Count }
-
-    # Compare each object by index (since they are now sorted)
-    for ($i = 0; $i -lt $minCount; $i++) {
-        $object1 = $data1[$i]
-        $object2 = $data2[$i]
-
-        # Compare the objects at the same index after sorting
-        $diff = Compare-JsonObjects -object1 $object1 -object2 $object2
-        if ($diff.Count -gt 0) {
-            # Use ${i} to delimit the variable in the string
-            $differences += "Differences in object at index ${i}:"
-            $differences += $diff
-        }
-    }
-
-    # If one dataset has extra objects, report them
-    if ($data1.Count -gt $data2.Count) {
-        for ($i = $data2.Count; $i -lt $data1.Count; $i++) {
-            # Use ${i} to delimit the variable in the string
-            $differences += "Extra object in sample1 at index ${i}: $($data1[$i])"
-        }
-    } elseif ($data2.Count -gt $data1.Count) {
-        for ($i = $data1.Count; $i -lt $data2.Count; $i++) {
-            # Use ${i} to delimit the variable in the string
-            $differences += "Extra object in sample2 at index ${i}: $($data2[$i])"
-        }
-    }
-
-    return $differences
-}
-
-# Compare the data directly from both JSON files
-$differences = Compare-JsonData -data1 $sample1 -data2 $sample2
+# Compare the two JSON files
+$differences = Compare-Json -json1 $json1 -json2 $json2
 
 # Output the results
 if ($differences.Count -eq 0) {
@@ -115,4 +51,3 @@ if ($differences.Count -eq 0) {
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
-}
