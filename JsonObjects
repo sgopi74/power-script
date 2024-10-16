@@ -2,7 +2,8 @@
 $sample1Path = "C:\path\to\sample1.json"
 $sample2Path = "C:\path\to\sample2.json"
 
-# Load the JSON data
+
+  # Load the JSON data
 $sample1 = Get-Content -Raw -Path $sample1Path | ConvertFrom-Json
 $sample2 = Get-Content -Raw -Path $sample2Path | ConvertFrom-Json
 
@@ -64,11 +65,11 @@ function Compare-JsonObjects {
         $value2 = Get-PropertyValue -object $object2 -propertyName $property
 
         if ($value1 -eq $null -and $value2 -ne $null) {
-            $differences += "Property '$property' found in object 2 but missing in object 1."
+            $differences += "Property '${property}' found in object 2 but missing in object 1."
         } elseif ($value1 -ne $null -and $value2 -eq $null) {
-            $differences += "Property '$property' found in object 1 but missing in object 2."
+            $differences += "Property '${property}' found in object 1 but missing in object 2."
         } elseif ($value1 -ne $value2) {
-            $differences += "Difference in property '$property': object1='$value1' object2='$value2'"
+            $differences += "Difference in property '${property}': object1='${value1}' object2='${value2}'"
         }
     }
 
@@ -89,7 +90,7 @@ function Compare-JsonData {
 
     # Compare object count
     if ($data1.Count -ne $data2.Count) {
-        $differences += "The number of objects differs: sample1=$($data1.Count) sample2=$($data2.Count)"
+        $differences += "The number of objects differs: sample1=${data1.Count} sample2=${data2.Count}"
     }
 
     # Compare each object by index (since they are now sorted)
@@ -100,7 +101,7 @@ function Compare-JsonData {
         # Compare the objects at the same index after sorting
         $diff = Compare-JsonObjects -object1 $object1 -object2 $object2
         if ($diff.Count -gt 0) {
-            $differences += "Differences in object at index $i:"
+            $differences += "Differences in object at index ${i}:"
             $differences += $diff
         }
     }
@@ -118,10 +119,3 @@ if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
 }
-PS C:\Users\SGK352\Downloads\JsonTest> .\JsonObjects.ps1
-At C:\Users\SGK352\Downloads\JsonTest\JsonObjects.ps1:103 char:61
-+             $differences += "Differences in object at index $i:"
-+                                                             ~~~
-Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
-    + CategoryInfo          : ParserError: (:) [], ParseException
-    + FullyQualifiedErrorId : InvalidVariableReferenceWithDrive
