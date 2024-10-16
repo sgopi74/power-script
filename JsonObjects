@@ -19,7 +19,7 @@ if ($structure1 -ne $structure2) {
     return
 }
 
-# Function to check if a property exists in an object and safely return its value
+# Function to safely get a property value
 function Get-PropertyValue {
     param (
         [Parameter(Mandatory=$true)] [pscustomobject]$object,
@@ -117,3 +117,4 @@ if ($differences.Count -eq 0) {
 } else {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
+}
