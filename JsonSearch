@@ -10,7 +10,7 @@ $sample2 = Get-Content -Raw -Path $sample2Path | ConvertFrom-Json
 $data1 = $sample1[1]
 $data2 = $sample2[1]
 
-# Function to search for objects containing the search string
+# Function to search for objects containing the search string (case-insensitive)
 function Search-JsonObjects {
     param (
         [Parameter(Mandatory=$true)]
@@ -24,11 +24,11 @@ function Search-JsonObjects {
 
     # Loop through each JSON object
     foreach ($obj in $data) {
-        # Check if any property value contains the search string
+        # Check if any property value contains the search string (case-insensitive)
         $matchFound = $false
         foreach ($property in $obj.PSObject.Properties) {
             $value = $property.Value
-            if ($value -match $searchString) {
+            if ($value -match [regex]::Escape($searchString)) {
                 $matchFound = $true
                 break
             }
