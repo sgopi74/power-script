@@ -1,0 +1,58 @@
+# Paths to the JSON files
+$sample1Path = "C:\path\to\sample1.json"
+$sample2Path = "C:\path\to\sample2.json"
+
+# Load the JSON data
+$sample1 = Get-Content -Raw -Path $sample1Path | ConvertFrom-Json
+$sample2 = Get-Content -Raw -Path $sample2Path | ConvertFrom-Json
+
+# Extract the data (assuming the data is the second element in the JSON array)
+$data1 = $sample1[1]
+$data2 = $sample2[1]
+
+# Function to search for objects containing the search string
+function Search-JsonObjects {
+    param (
+        [Parameter(Mandatory=$true)]
+        [array]$data,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$searchString
+    )
+
+    $results = @()
+
+    # Loop through each JSON object
+    foreach ($obj in $data) {
+        # Check if any property value contains the search string
+        $matchFound = $false
+        foreach ($property in $obj.PSObject.Properties) {
+            $value = $property.Value
+            if ($value -match $searchString) {
+                $matchFound = $true
+                break
+            }
+        }
+
+        # If a match is found, add the entire object to the results
+        if ($matchFound) {
+            $results += $obj
+        }
+    }
+
+    return $results
+}
+
+# Prompt the user for a search string
+$searchString = Read-Host "Enter the string to search for in JSON files"
+
+# Search in both original and modified data
+$originalMatches = Search-JsonObjects -data $data1 -searchString $searchString
+$modifiedMatches = Search-JsonObjects -data $data2 -searchString $searchString
+
+# Output the results
+Write-Output "Objects from the original file containing '$searchString':"
+$originalMatches | ForEach-Object { $_ | ConvertTo-Json -Depth 10 }
+
+Write-Output "`nObjects from the modified file containing '$searchString':"
+$modifiedMatches | ForEach-Object { $_ | ConvertTo-Json -Depth 10 }
