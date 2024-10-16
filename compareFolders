@@ -1,0 +1,109 @@
+# Paths to the folders containing original and modified files
+$originalFolderPath = "C:\path\to\original\folder"
+$modifiedFolderPath = "C:\path\to\modified\folder"
+
+# Get all file names in the original and modified folders
+$originalFiles = Get-ChildItem -Path $originalFolderPath -File
+$modifiedFiles = Get-ChildItem -Path $modifiedFolderPath -File
+
+# Function to split content into words and symbols, while removing specified symbols
+function Split-Text {
+    param (
+        [Parameter(Mandatory=$true)] [string]$content
+    )
+    
+    # Remove specific symbols (e.g., ["{}], commas, quotes)
+    $content = $content -replace '[\[\]{}",]', ''
+
+    # Split the content by whitespace (space, tab, newline) and convert to lowercase
+    return $content -split '\s+' | Where-Object { $_ -ne '' } | ForEach-Object { $_.ToLower() }  # Filters out empty strings
+}
+
+# Function to count occurrences of words
+function Count-Words {
+    param (
+        [Parameter(Mandatory=$true)] [array]$tokens
+    )
+
+    $wordCounts = @{}
+    foreach ($word in $tokens) {
+        if ($wordCounts.ContainsKey($word)) {
+            $wordCounts[$word] += 1
+        } else {
+            $wordCounts[$word] = 1
+        }
+    }
+    return $wordCounts
+}
+
+# Ensure all files are processed by combining file lists and ensuring all pairs are compared
+$allFiles = $originalFiles.Name + $modifiedFiles.Name | Sort-Object -Unique
+
+foreach ($fileName in $allFiles) {
+    $originalFile = $originalFiles | Where-Object { $_.Name -eq $fileName }
+    $modifiedFile = $modifiedFiles | Where-Object { $_.Name -eq $fileName }
+
+    if ($originalFile -and $modifiedFile) {
+        # Load the file contents
+        $originalFilePath = Join-Path $originalFolderPath $originalFile.Name
+        $modifiedFilePath = Join-Path $modifiedFolderPath $modifiedFile.Name
+
+        $originalFileContent = Get-Content -Raw -Path $originalFilePath
+        $modifiedFileContent = Get-Content -Raw -Path $modifiedFilePath
+
+        # Split the content of both files into words
+        $originalTokens = Split-Text -content $originalFileContent
+        $modifiedTokens = Split-Text -content $modifiedFileContent
+
+        # Count word occurrences in both files
+        $originalWordCounts = Count-Words -tokens $originalTokens
+        $modifiedWordCounts = Count-Words -tokens $modifiedTokens
+
+        # Compare both files, showing words that are only in one of the files
+        $onlyInOriginal = $originalWordCounts.Keys | Where-Object { $_ -notin $modifiedWordCounts.Keys }
+        $onlyInModified = $modifiedWordCounts.Keys | Where-Object { $_ -notin $originalWordCounts.Keys }
+
+        Write-Output "`nComparing file: $fileName"
+        Write-Output "------------------------------------"
+
+        # Output the differences and word counts for the original file
+        if ($onlyInOriginal.Count -gt 0) {
+            Write-Output "Words only in the original file:"
+            foreach ($word in $onlyInOriginal) {
+                Write-Output "$word -> $($originalWordCounts[$word]) times"
+            }
+        } else {
+            Write-Output "No unique words found in the original file."
+        }
+
+        # Output the differences and word counts for the modified file
+        if ($onlyInModified.Count -gt 0) {
+            Write-Output "`nWords only in the modified file:"
+            foreach ($word in $onlyInModified) {
+                Write-Output "$word -> $($modifiedWordCounts[$word]) times"
+            }
+        } else {
+            Write-Output "`nNo unique words found in the modified file."
+        }
+
+        # Compare common words with different counts in both files
+        $commonWords = $originalWordCounts.Keys | Where-Object { $_ -in $modifiedWordCounts.Keys }
+        $differencesFound = $false
+        Write-Output "`nCommon words with different counts:"
+        foreach ($word in $commonWords) {
+            if ($originalWordCounts[$word] -ne $modifiedWordCounts[$word]) {
+                Write-Output "$word -> $($originalWordCounts[$word]) times (original), $($modifiedWordCounts[$word]) times (modified)"
+                $differencesFound = $true
+            }
+        }
+
+        if (-not $differencesFound) {
+            Write-Output "No common words have different counts."
+        }
+
+    } elseif ($originalFile) {
+        Write-Output "`nFile '$fileName' exists in the original folder but not in the modified folder."
+    } elseif ($modifiedFile) {
+        Write-Output "`nFile '$fileName' exists in the modified folder but not in the original folder."
+    }
+}
