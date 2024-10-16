@@ -118,3 +118,10 @@ if ($differences.Count -eq 0) {
     Write-Output "The two JSON files are not identical. Differences:"
     $differences | ForEach-Object { Write-Output $_ }
 }
+PS C:\Users\SGK352\Downloads\JsonTest> .\JsonObjects.ps1
+At C:\Users\SGK352\Downloads\JsonTest\JsonObjects.ps1:103 char:61
++             $differences += "Differences in object at index $i:"
++                                                             ~~~
+Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
+    + CategoryInfo          : ParserError: (:) [], ParseException
+    + FullyQualifiedErrorId : InvalidVariableReferenceWithDrive
