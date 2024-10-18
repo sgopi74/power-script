@@ -1,0 +1,43 @@
+# Prompt the user to enter the folder path
+$folderPath = Read-Host "Please enter the folder path"
+
+# Prompt the user to enter the search term
+$searchTerm = Read-Host "Please enter the search term"
+
+# Get all the files in the specified folder (you can modify this filter as needed)
+$files = Get-ChildItem -Path $folderPath -File
+
+# Loop through each file
+foreach ($file in $files) {
+    Write-Host "Searching in file: $($file.FullName)" -ForegroundColor Cyan
+    $lines = Get-Content $file.FullName
+    
+    # Loop through each line with its corresponding line number
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        $lineNumber = $i + 1
+        $line = $lines[$i]
+        
+        # Check if the line contains the search term
+        if ($line -match $searchTerm) {
+            # Highlight the line with the search term in a different color (e.g., red for the search term and yellow for the line number)
+            Write-Host "Line $lineNumber:" -ForegroundColor Yellow
+
+            # Split the line by the search term to apply color coding to the matched term
+            $parts = $line -split ($searchTerm)
+            for ($j = 0; $j -lt $parts.Length; $j++) {
+                # Output the part before the search term (in white)
+                Write-Host -NoNewline $parts[$j] -ForegroundColor White
+
+                # If not the last part, output the search term in red
+                if ($j -lt $parts.Length - 1) {
+                    Write-Host -NoNewline $searchTerm -ForegroundColor Red
+                }
+            }
+            Write-Host # To add a newline after each result
+        } else {
+            # Output the lines that don't contain the search term in default white color
+            Write-Host "Line $lineNumber: $line" -ForegroundColor White
+        }
+    }
+    Write-Host "" # Add a blank line between different files for better readability
+}
