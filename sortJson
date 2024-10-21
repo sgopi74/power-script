@@ -2,10 +2,16 @@
 $inputJsonFile = "C:\path\to\input.json"
 
 # Load JSON data from the file
-$jsonData = Get-Content -Path $inputJsonFile | ConvertFrom-Json
+$jsonData = Get-Content -Path $inputJsonFile -Raw | ConvertFrom-Json
 
-# Sort the JSON objects by multiple keys (e.g., 'age' and 'name')
-$sortedData = $jsonData | Sort-Object -Property age, name
+# Check if the JSON data is an array (PowerShell 5.1 handles JSON slightly differently)
+if ($jsonData -is [System.Collections.ArrayList] -or $jsonData -is [Array]) {
+    # Sort the JSON objects by multiple keys (e.g., 'age' and 'name')
+    $sortedData = $jsonData | Sort-Object -Property age, name
+} else {
+    Write-Host "Error: The JSON root element is not an array."
+    exit
+}
 
 # Convert the sorted data back to JSON format
 $sortedJson = $sortedData | ConvertTo-Json -Compress
