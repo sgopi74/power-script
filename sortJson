@@ -1,0 +1,20 @@
+# Define the path for the input JSON file
+$inputJsonFile = "C:\path\to\input.json"
+
+# Load JSON data from the file
+$jsonData = Get-Content -Path $inputJsonFile | ConvertFrom-Json
+
+# Sort the JSON objects by multiple keys (e.g., 'age' and 'name')
+$sortedData = $jsonData | Sort-Object -Property age, name
+
+# Convert the sorted data back to JSON format
+$sortedJson = $sortedData | ConvertTo-Json -Compress
+
+# Define the path for the output JSON file
+$outputJsonFile = "C:\path\to\sorted_output.json"
+
+# Write the sorted JSON data to an output file
+$sortedJson | Out-File -FilePath $outputJsonFile
+
+# Output a message indicating the sorting is complete
+Write-Host "JSON sorting complete. Sorted data saved to $outputJsonFile"
